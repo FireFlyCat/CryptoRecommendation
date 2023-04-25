@@ -8,7 +8,9 @@ by providing simple amount of analytical functions and allows to decide which cu
 
 
 ## Install 
-
+```
+git clone https://github.com/FireFlyCat/CryptoRecommendation.git
+```
 ## Build & Deploy locally
 ### Presetup
 
