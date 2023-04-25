@@ -1,0 +1,84 @@
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.4.xsd
+        http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd">
+
+<!--    Create record table that contains initial files data -->
+    <changeSet id="create_records_table" author="maksym_koriak">
+        <createTable tableName="records">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="symbol" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="timestamp" type="timestamp">
+                <constraints nullable="false" />
+            </column>
+            <column name="price" type="DOUBLE">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="records"/>
+        </rollback>
+    </changeSet>
+
+<!-- Create view that groups records by day and calculates min/max values for each currency-->
+    <changeSet id="create_metadata_days_table" author="maksym_koriak">
+        <sql>
+            CREATE VIEW currency_metadata_days AS
+            select dateadd(DAY, datediff(DAY, now(), timestamp), now()) as day_timestamp,
+            MAX(PRICE) as max_price,
+            MIN(PRICE) as min_price,
+            ((MAX(PRICE)  - MIN(PRICE))/MIN(PRICE)) as normalization,
+            symbol
+            FROM records
+            GROUP BY day_timestamp, symbol
+        </sql>
+        <rollback>
+            <sql>
+                DROP VIEW currency_metadata_days
+            </sql>
+        </rollback>
+    </changeSet>
+
+    <!-- Create view that groups records by month and calculates min/max/old/new values for each currency-->
+    <changeSet id="create_metadata_months_table" author="maksym_koriak">
+        <sql>
+            CREATE VIEW currency_metadata_months AS
+            select diff as month_timestamp,
+            max_price,
+            min_price,
+            normalization,
+            symbol,
+            (   SELECT distinct FIRST_VALUE(PRICE) OVER (PARTITION BY symbol  ORDER BY rec.timestamp)
+                FROM records rec
+                where rec.symbol =result.symbol and datediff(MONTH, rec.timestamp, diff) = 0
+            ) as old_price,
+            (
+                SELECT distinct FIRST_VALUE(PRICE) OVER (PARTITION BY symbol  ORDER BY rec.timestamp desc)
+                FROM records rec
+                where rec.symbol =result.symbol and datediff(MONTH, rec.timestamp, diff) = 0
+            ) as new_price
+
+            FROM
+            (
+                select dateadd(MONTH, datediff(MONTH, now(), rec.timestamp), now()) as diff,
+                MAX(PRICE) as max_price,
+                MIN(PRICE) as min_price,
+                ((MAX(PRICE)  - MIN(PRICE))/MIN(PRICE)) as normalization,
+                rec.symbol
+                FROM records rec
+                GROUP BY diff, rec.symbol
+            ) result
+        </sql>
+        <rollback>
+            <sql>
+                DROP VIEW currency_metadata_months
+            </sql>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
