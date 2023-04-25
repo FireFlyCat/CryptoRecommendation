@@ -54,5 +54,9 @@ Linux
 TODO
 ## Notes for Reviewers
 - JobExecutor is a simple imitation of Job task that will import the initial data into Records table. In future can be replaced to Spring Batch with chunks
-- Metadata views are used to provide data for main API application. Can be optimized by creating plain table that will be updated with nw historical data. currently it is too much overhead
-- units tests are not written because of a hurry
+- Metadata views are used to provide data for main API application. Can be optimized by creating plain table that will be updated with new historical metadata using job or triggers. currently it is too much overhead
+### TODO
+- add Unit tests - they wehe skipped because of a hurry
+- Parametrise configuration 
+- Create docker file, docker compose
+- prepare helm script for kubernetes deploy
